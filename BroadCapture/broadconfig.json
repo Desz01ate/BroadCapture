@@ -1,0 +1,9 @@
+{
+  "DiscordBotToken": "",
+  "CommandPrefix": "!",
+  "Interval": 50,
+  "Maintenance": false,
+  "DisabledOtherMessage": false,
+  "Blocklisting": [],
+  "NpgsqlConnectionString": ""
+}
