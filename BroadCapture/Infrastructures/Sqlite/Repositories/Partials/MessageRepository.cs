@@ -6,16 +6,15 @@ using BroadCaptureML.Model.Enum;
 using System.Threading.Tasks;
 using RDapter.Extends;
 
-namespace BroadCapture.Repositories
+namespace BroadCapture.Infrastructures.Sqlite.Repositories
 {
     ///<summary>
     /// Data contractor for Message
     ///</summary>
-    public partial class MessageRepository : Repository<Message>
+    public partial class SqliteMessageRepository : Repository<Message>
     {
-        public Task<int> ManualInsertAsync(string currentMessage, int type, string CreateBy)
+        private Task<int> ManualInsertAsync(string currentMessage, int type, string CreateBy)
         {
-            TotalMessages += 1;
             var (isBuy, isSell, isTrade) = ValidateFlagType(type);
             var parameter = new
             {
@@ -28,9 +27,7 @@ namespace BroadCapture.Repositories
                 isTrade
             };
             var sql = "INSERT INTO Message(Content,Type,CreateDate,CreateBy,IsBuy,IsSell,IsTrade) VALUES(@content,@type,@createDate,@createBy,@isBuy,@isSell,@isTrade)";
-            Service.OfflineConnection.ExecuteNonQuery(sql, parameter);
             return this.Connector.ExecuteNonQueryAsync(sql, parameter);
-
         }
 
         private (bool isBuy, bool isSell, bool isTrade) ValidateFlagType(int type)

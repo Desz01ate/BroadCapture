@@ -8,20 +8,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BroadCapture.Repositories
+namespace BroadCapture.Infrastructures.Sqlite.Repositories
 {
-    public class ReservationRepository : Repository<Reservation>
+    public class SqliteReservationRepository : Repository<Reservation>
     {
-        private DatabaseContext service;
-        public ReservationRepository(DatabaseContext service) : base(service.OfflineConnection)
+        public SqliteReservationRepository(DbConnection dbConnection) : base(dbConnection)
         {
-            this.service = service;
         }
         public IEnumerable<Reservation> GetReservationByKeyword(string keyword)
         {
             var param = keyword.ToLower();
             var query = $@"SELECT * FROM Reservation WHERE lower(Keyword) LIKE @keyword";
-            return service.OnlineConnection.ExecuteReader<Reservation>(query, new
+            return this.Connector.ExecuteReader<Reservation>(query, new
             {
                 keyword = $"%{param}%"
             });

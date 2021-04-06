@@ -14,11 +14,19 @@ using System.Linq;
 using System.Runtime.Remoting.Contexts;
 using System.Threading.Tasks;
 using Utilities.Shared;
+using Autofac;
+using BroadCapture.Repositories.Interfaces;
 
 namespace AndroGETracker
 {
     public partial class CommandsHandler : BaseCommandModule
     {
+        private readonly IDbContext _dbContext;
+        public CommandsHandler()
+        {
+            var dbContext = ConfigurationContainer.Configure().Resolve<IDbContext>();
+            this._dbContext = dbContext;
+        }
         public override Task BeforeExecutionAsync(CommandContext ctx)
         {
             var author = ctx.Message.Author;
@@ -33,7 +41,7 @@ namespace AndroGETracker
         [Description("search for specific sell from all broads available.")]
         public async Task Sell(CommandContext ctx, [RemainingText] string keyword)
         {
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -46,7 +54,7 @@ namespace AndroGETracker
         [Description("search for specific buy from all broads available.")]
         public async Task Buy(CommandContext ctx, [RemainingText] string keyword)
         {
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -59,7 +67,7 @@ namespace AndroGETracker
         [Description("search for specific trade from all broads available.")]
         public async Task Trade(CommandContext ctx, [RemainingText] string keyword)
         {
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -72,7 +80,7 @@ namespace AndroGETracker
         [Description("search for specific broads within search keyword criteria")]
         public async Task Search(CommandContext ctx, [RemainingText] string keyword)
         {
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -85,7 +93,7 @@ namespace AndroGETracker
         [Description("search for raid party from broads.")]
         public async Task Raid(CommandContext ctx, [RemainingText] string raidName)
         {
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -108,7 +116,7 @@ namespace AndroGETracker
                 var dm = await ctx.Member.CreateDmChannelAsync();
                 replyAction = async (s) => await dm.SendMessageAsync(s);
             }
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -126,7 +134,7 @@ namespace AndroGETracker
             keyword = keyword.ToLower();
             if (keyword == "cancel")
             {
-                DatabaseContext.Instance.Reservation.Delete(id);
+                this._dbContext.Reservations.Delete(id);
                 replyAction("Previous subscription has been cancelled.");
                 return;
                 //else
@@ -135,7 +143,7 @@ namespace AndroGETracker
                 //}
                 //return;
             }
-            DatabaseContext.Instance.Reservation.Insert(new BroadCapture.Models.Reservation()
+            this._dbContext.Reservations.Insert(new BroadCapture.Models.Reservation()
             {
                 OwnerId = (long)id,
                 Keyword = keyword,
@@ -148,7 +156,7 @@ namespace AndroGETracker
         [Description("Set preferences that is fit for your personal usage.")]
         public async Task Preferences(CommandContext ctx, string key = null, string value = null)
         {
-            await DatabaseContext.Instance.BotRequestLogs.InsertAsync(new BotRequestLog()
+            await this._dbContext.BotRequestLogs.InsertAsync(new BotRequestLog()
             {
                 Uid = (long)ctx.Message.Author.Id,
                 Username = ctx.Message.Author.Username,
@@ -158,12 +166,12 @@ namespace AndroGETracker
             try
             {
                 var lookupId = (long)ctx.Message.Author.Id;
-                Preferences preferences = DatabaseContext.Instance.Preferences.Query(x => x.UserId == lookupId).FirstOrDefault();
+                Preferences preferences = this._dbContext.Preferences.Query(x => x.UserId == lookupId).FirstOrDefault();
                 if (preferences == null)
                 {
                     preferences = new Preferences();
                     preferences.UserId = (long)ctx.Message.Author.Id;
-                    DatabaseContext.Instance.Preferences.Insert(preferences);
+                    this._dbContext.Preferences.Insert(preferences);
                 }
                 switch (key)
                 {
@@ -177,12 +185,12 @@ namespace AndroGETracker
                         await ctx.RespondAsync($"Your current preference is {preferences.SearchLimit} messages within {preferences.SearchRange} days.");
                         return;
                 }
-                DatabaseContext.Instance.Preferences.Update(preferences);
+                this._dbContext.Preferences.Update(preferences);
                 await ctx.RespondAsync("Preferences saved.");
             }
             catch (Exception ex)
             {
-                await DatabaseContext.Instance.ErrorLog.InsertAsync(new ErrorLog(ex.ToString()));
+                await this._dbContext.ErrorLogs.InsertAsync(new ErrorLog(ex.ToString()));
                 await ctx.RespondAsync($"There is an error occured when processing command.");
             }
         }
@@ -217,7 +225,7 @@ namespace AndroGETracker
                         break;
                 }
                 var lookupId = (long)author.Id;
-                var preference = DatabaseContext.Instance.Preferences.Query(x => x.UserId == lookupId).FirstOrDefault();
+                var preference = this._dbContext.Preferences.Query(x => x.UserId == lookupId).FirstOrDefault();
                 var keywords = keyword.Split(',').Select(x => x.Trim()).ToArray();
                 var range = preference?.SearchRange ?? 1;
                 var limit = preference?.SearchLimit ?? 10;
@@ -247,25 +255,18 @@ namespace AndroGETracker
                 var retry = 0;
                 List<Message> result;
                 var limitDate = DateTime.Today.AddDays(-range);
-                var query = $@"SELECT L.*
-                                   FROM Message L
-                                   INNER JOIN (
-                                   	SELECT id,max(createdate) AS Latest
-                                   	FROM Message
-                                   	WHERE {filter}
-                                       {keywordsFilter}
-                                       AND createdate >= '{limitDate.Year}-{limitDate.Month}-{limitDate.Day}'
-                                   	GROUP BY id,createby
-                                   ) R
-                                   ON L.CreateDate = R.Latest AND L.Id = R.Id
-                                   ORDER BY CreateDate DESC 
-                                   LIMIT {limit}";
                 do
                 {
                     var copyParam = param.ConvertAll(x => x);
                     range += (retry * 30);
                     copyParam.Add(new RDapter.Entities.DatabaseParameter("date", DateTime.Today.AddDays(-range)));
-                    result = DatabaseContext.Instance.OnlineConnection.ExecuteReader<Message>(new RDapter.Entities.ExecutionCommand(query, copyParam)).GroupBy(x => x.content).Select(x => x.First()).AsList();
+                    result = (List<Message>)await this._dbContext.Messages.ExecuteDirectFunctionAsync("search", new object[] {
+                        filter,
+                        keywordsFilter.ToString(),
+                        limitDate,
+                        limit,
+                        copyParam
+                    });
                 } while (result.Count == 0 && retry++ < 2);
                 if (retry == 1)
                 {

@@ -1,5 +1,6 @@
 ﻿using AndroGETracker;
 using BroadCapture.Models;
+using BroadCapture.Repositories.Interfaces;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
@@ -16,9 +17,10 @@ namespace BroadCapture
     {
         public readonly DiscordClient Client;
         private readonly List<DiscordChannel> channels;
-
-        private DiscordClientFactory()
+        private readonly IDbContext _dbContext;
+        private DiscordClientFactory(IDbContext dbContext)
         {
+            this._dbContext = dbContext;
             channels = new List<DiscordChannel>();
             Client = new DiscordClient(new DiscordConfiguration()
             {
@@ -40,12 +42,13 @@ namespace BroadCapture
                 EnableDms = true,
                 EnableMentionPrefix = true,
             });
-            Commands.RegisterCommands<CommandsHandler>();
+            //Commands.RegisterCommands<CommandsHandler>();
+            Commands.RegisterCommands(typeof(CommandsHandler));
             Commands.CommandErrored += CommandErrorHandler;
         }
-        public static async Task<DiscordClientFactory> CreateAsync()
+        public static async Task<DiscordClientFactory> CreateAsync(IDbContext dbContext)
         {
-            var fac = new DiscordClientFactory();
+            var fac = new DiscordClientFactory(dbContext);
             await fac.Client.ConnectAsync();
             return fac;
         }
@@ -124,7 +127,7 @@ namespace BroadCapture
         private async Task CommandErrorHandler(CommandErrorEventArgs e)
         {
             Console.WriteLine(e.Exception.Message);
-            DatabaseContext.Instance.ErrorLog.Insert(new ErrorLog(e.Exception.ToString()));
+            this._dbContext.ErrorLogs.Insert(new ErrorLog(e.Exception.ToString()));
         }
         public IEnumerable<DiscordChannel> GetDiscordChannels()
         {

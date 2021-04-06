@@ -7,9 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BroadCapture
+namespace BroadCapture.Infrastructures.Sqlite
 {
-    public partial class DatabaseContext
+    public partial class SqliteDbContext
     {
         private void ServiceCheckUp()
         {
@@ -71,7 +71,7 @@ namespace BroadCapture
             //});
             RDapter.Global.SetSchemaConstraint<Message>(x =>
             {
-                x.SetPrimaryKey<Message>(y => y.id);
+                x.SetPrimaryKey<Message>(y => y.id, autoIncrement: true);
             });
             RDapter.Global.SetSchemaConstraint<Reservation>(x =>
             {
@@ -84,33 +84,33 @@ namespace BroadCapture
             var messageTableCheck = CheckTableExists("Message");
             if (!messageTableCheck)
             {
-                this.OfflineConnection.CreateTable<Message>();
+                this._dbConnection.CreateTable<Message>();
             }
             var reservationTableCheck = CheckTableExists("Reservation");
             if (!reservationTableCheck)
             {
-                this.OfflineConnection.CreateTable<Reservation>();
+                this._dbConnection.CreateTable<Reservation>();
             }
             var errorLogTableCheck = CheckTableExists("ErrorLog");
             if (!errorLogTableCheck)
             {
-                this.OfflineConnection.CreateTable<ErrorLog>();
+                this._dbConnection.CreateTable<ErrorLog>();
             }
             var preferencesTableCheck = CheckTableExists("Preferences");
             if (!preferencesTableCheck)
             {
-                this.OfflineConnection.CreateTable<Preferences>();
+                this._dbConnection.CreateTable<Preferences>();
             }
             var botRequestLogCheck = CheckTableExists(nameof(BotRequestLog));
             if (!botRequestLogCheck)
             {
-                this.OfflineConnection.CreateTable<BotRequestLog>();
+                this._dbConnection.CreateTable<BotRequestLog>();
             }
         }
 
         private bool CheckTableExists(string tableName)
         {
-            var checker = this.OfflineConnection.ExecuteScalar($"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';");
+            var checker = this._dbConnection.ExecuteScalar($"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';");
             return checker != null;
         }
     }

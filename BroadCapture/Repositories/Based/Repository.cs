@@ -6,6 +6,7 @@
 //     the code is regenerated.
 // </auto-generated>
 // ------------------------------------------------------------------------------
+using BroadCapture.Repositories.Interfaces;
 using RDapter.Extends;
 using System;
 using System.Collections;
@@ -22,7 +23,7 @@ namespace BroadCapture.Repositories.Based
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="TDatabase"></typeparam>
     /// <typeparam name="TParameter"></typeparam>
-    public partial class Repository<T> : IEnumerable<T>
+    public abstract partial class Repository<T> : IRepository<T>
         where T : class, new()
     {
         /// <summary>
@@ -235,6 +236,12 @@ namespace BroadCapture.Repositories.Based
         {
             return GetEnumerator();
         }
+
+        // <inheritdoc/>
+        public virtual object ExecuteDirectFunction(string function, params object[] args) => throw new NotImplementedException();
+
+        // <inheritdoc/>
+        public virtual Task<object> ExecuteDirectFunctionAsync(string function, params object[] args) => throw new NotImplementedException();
     }
 }
 
